@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Профиль</title>
+</head>
+<body data-theme="light">
+    <div class="theme-toggle">
+        <button id="toggle-theme">🌞</button>
+    </div>
+    <h1>Личный кабинет</h1>
+    <div id="profile-section">
+        <h2>Профиль</h2>
+        <p>Добро пожаловать!</p>
+        <button id="logout-btn">Выйти</button>
+    </div>
+
+    <h1>Демонстрация кэширования</h1>
+    <div class="controls">
+      <button id="refresh-data">Обновить данные</button>
+    </div>
+    <div id="data-container"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutBtn = document.getElementById('logout-btn');
+
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                } catch (err) {
+                    alert('Ошибка при выходе');
+                }
+            });
+
+            async function checkAuth() {
+                try {
+                    const response = await fetch('/check-auth', {
+                        credentials: 'include'
+                    });
+
+                    const data = await response.json();
+
+                    if (data.authenticated) {
+                        document.getElementById('username-display').textContent = data.user.username;
+                    } else {
+                        window.location.href = '/';
+                    }
+                } catch (err) {
+                    console.error('Ошибка проверки авторизации:', err);
+                }
+            }
+
+            document.getElementById('toggle-theme').addEventListener('click', () => {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+                document.body.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+
+                const themeButton = document.getElementById('toggle-theme');
+                themeButton.textContent = newTheme === 'light' ? '🌞' : '🌜';
+            });
+
+            function loadTheme() {
+                const theme = localStorage.getItem('theme') || 'light';
+                document.body.setAttribute('data-theme', theme);
+
+                const themeButton = document.getElementById('toggle-theme');
+                themeButton.textContent = theme === 'light' ? '🌞' : '🌜';
+            }
+
+            async function updateData() {
+                const response = await fetch('/data');
+                const data = await response.json();
+
+                document.getElementById('data-container').innerHTML = `
+                  <h3>Данные API</h3>
+                  <p><strong>Источник:</strong> ${data.source}</p>
+                  <p><strong>Время генерации:</strong> ${new Date(data.timestamp).toLocaleTimeString()}</p>
+                  <pre>${JSON.stringify(data.items, null, 2)}</pre>
+                `;
+            }
+
+            document.getElementById('refresh-data').addEventListener('click', updateData);
+
+            loadTheme();
+            updateData();
+            checkAuth();
+
+            setInterval(updateData, 5000);
+        });
+    </script>
+</body>
+</html>
